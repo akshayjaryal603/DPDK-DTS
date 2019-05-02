@@ -24,7 +24,7 @@ class TestL2fwd(TestCase):
                             {'queues': 8, 'Mpps': {}, 'pct': {}}
                             ]
 	print("***configuration started")
-        self.core_config = "1S/2C/1T"
+        self.core_config = "1S/4C/1T"
 	print("***configuration completed")
         self.number_of_ports = 2
         self.headers_size = HEADER_SIZE['eth'] + HEADER_SIZE['ip'] + \
