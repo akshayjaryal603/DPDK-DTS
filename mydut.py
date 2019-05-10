@@ -135,8 +135,6 @@ class MyDut(Crb):
 
         self.init_core_list()
         self.pci_devices_information()
-        # make sure ipv6 enable before scan
-        #self.enable_tester_ipv6()
         # scan ports before restore interface
         self.scan_ports()
         # restore dut ports to kernel
@@ -148,8 +146,6 @@ class MyDut(Crb):
         self.mount_procfs()
         # auto detect network topology
         self.map_available_ports()
-        # disable tester port ipv6
-        #self.disable_tester_ipv6()
         # print latest ports_info
         for port_info in self.ports_info:
             self.logger.info(port_info)
@@ -764,11 +760,6 @@ class MyDut(Crb):
 
         for port in remove:
             self.ports_info.remove(port)
-    '''
-    def disable_tester_ipv6(self):
-        pass
-    def enable_tester_ipv6(self):
-        pass'''
 
     def check_port_occupied(self, port):
         out = self.alt_session.send_expect('lsof -i:%d' % port, '# ')
