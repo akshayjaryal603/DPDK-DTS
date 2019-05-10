@@ -30,6 +30,7 @@ class MyDut(Crb):
     PCI_DEV_CACHE_KEY = 'dut_pci_dev_info'
 
     def __init__(self, crb, serializer, dut_id):
+	print("******************** MyDut class file call here")
         self.NAME = 'dut' + LOG_NAME_SEP + '%s' % crb['My IP']
         super(MyDut, self).__init__(crb, serializer, self.NAME, alt_session=True, dut_id=dut_id)
 
@@ -117,6 +118,9 @@ class MyDut(Crb):
         return self.crb['user']
 
     def dut_prerequisites(self):
+
+	print("******************** MyDut class file prerequisites call here")
+
         """
         Prerequest function should be called before execute any test case.
         Will call function to scan all lcore's information which on DUT.
@@ -132,7 +136,7 @@ class MyDut(Crb):
         self.init_core_list()
         self.pci_devices_information()
         # make sure ipv6 enable before scan
-        self.enable_tester_ipv6()
+        #self.enable_tester_ipv6()
         # scan ports before restore interface
         self.scan_ports()
         # restore dut ports to kernel
@@ -145,7 +149,7 @@ class MyDut(Crb):
         # auto detect network topology
         self.map_available_ports()
         # disable tester port ipv6
-        self.disable_tester_ipv6()
+        #self.disable_tester_ipv6()
         # print latest ports_info
         for port_info in self.ports_info:
             self.logger.info(port_info)
@@ -513,24 +517,6 @@ class MyDut(Crb):
 
         return False
 
-    def rescan_ports(self):
-        """
-        Rescan ports information
-        """
-        pass
-
-    def rescan_ports_uncached(self):
-        """
-        rescan ports and update port's mac address, intf, ipv6 address.
-        """
-        pass
-
-    def rescan_ports_uncached_linux(self):
-        pass
-
-    def rescan_ports_uncached_freebsd(self):
-        pass
-
     def load_serializer_ports(self):
         cached_ports_info = self.serializer.load(self.PORT_INFO_CACHE_KEY)
         if cached_ports_info is None:
@@ -639,6 +625,7 @@ class MyDut(Crb):
             self.ports_info.append(
                 {'port': port, 'pci': pci_bus, 'type': pci_id, 'numa': numa,
                  'intf': intf, 'mac': macaddr})
+
 
     def scan_ports_uncached_freebsd(self):
         """
@@ -777,11 +764,11 @@ class MyDut(Crb):
 
         for port in remove:
             self.ports_info.remove(port)
-
+    '''
     def disable_tester_ipv6(self):
         pass
     def enable_tester_ipv6(self):
-        pass
+        pass'''
 
     def check_port_occupied(self, port):
         out = self.alt_session.send_expect('lsof -i:%d' % port, '# ')
@@ -791,15 +778,8 @@ class MyDut(Crb):
             return True
 
     def get_maximal_vnc_num(self):
-        out = self.send_expect("ps aux | grep '\-vnc' | grep -v grep", '# ')
-        if out:
-            ports = re.findall(r'-vnc .*?:(\d+)', out)
-            for num in range(len(ports)):
-                ports[num] = int(ports[num])
-                ports.sort()
-        else:
-            ports = [0, ]
-        return ports[-1]
+        
+	return
 
     def close(self):
         """
@@ -819,5 +799,6 @@ class MyDut(Crb):
         Recover all resource before crb exit
         """
         self.logger.logger_exit()
-        self.enable_tester_ipv6()
+        #self.enable_tester_ipv6()
         self.close()
+
