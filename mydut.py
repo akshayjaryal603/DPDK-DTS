@@ -7,7 +7,7 @@ from settings import NICS, LOG_NAME_SEP
 from ssh_connection import SSHConnection
 from crb import Crb
 from net_device import GetNicObj
-from virt_resource import VirtResource
+#from virt_resource import VirtResource
 from utils import RED, remove_old_rsa_key
 from uuid import uuid4
 #from project_dpdk import DPDKdut
@@ -30,7 +30,9 @@ class MyDut(Crb):
     PCI_DEV_CACHE_KEY = 'dut_pci_dev_info'
 
     def __init__(self, crb, serializer, dut_id):
+
 	print("******************** MyDut class file call here")
+
         self.NAME = 'dut' + LOG_NAME_SEP + '%s' % crb['My IP']
         super(MyDut, self).__init__(crb, serializer, self.NAME, alt_session=True, dut_id=dut_id)
 
@@ -42,7 +44,7 @@ class MyDut(Crb):
         self.ports_info = []
         self.conf = PortConf()
         self.ports_map = []
-        self.virt_pool = None
+        #self.virt_pool = None
         # hypervisor pid list, used for cleanup
         self.virt_pids = []
 
@@ -137,10 +139,6 @@ class MyDut(Crb):
         self.pci_devices_information()
         # scan ports before restore interface
         self.scan_ports()
-        # restore dut ports to kernel
-        self.restore_interfaces()
-        # rescan ports after interface up
-        #self.rescan_ports()
         # load port infor from config file
         self.load_portconf()
         self.mount_procfs()
@@ -154,24 +152,11 @@ class MyDut(Crb):
             self.logger.warning("ports_map should not be empty, please check all links")
 
         # initialize virtualization resource pool
-        self.virt_pool = VirtResource(self)
-
-    def restore_interfaces(self):
-        """
-        Restore all ports's interfaces.
-        """
-        # no need to restore for all info has been recorded
-        pass
+        #self.virt_pool = VirtResource(self)
 
     def stop_ports(self):
         """
         After all execution done, some special nic like fm10k should be stop
-        """
-        pass
-
-    def restore_interfaces_linux(self):
-        """
-        Restore Linux interfaces.
         """
         pass
 
@@ -682,4 +667,3 @@ class MyDut(Crb):
         self.logger.logger_exit()
         #self.enable_tester_ipv6()
         self.close()
-
