@@ -161,139 +161,29 @@ class MyDut(Crb):
         Restore all ports's interfaces.
         """
         # no need to restore for all info has been recorded
-        if self.read_cache:
-            return
-
-        restore_interfaces = getattr(self, 'restore_interfaces_%s' % self.get_os_type())
-        return restore_interfaces()
-
-    def restore_interfaces_freebsd(self):
-        """
-        Restore FreeBSD interfaces.
-        """
         pass
 
     def stop_ports(self):
         """
         After all execution done, some special nic like fm10k should be stop
         """
-        for (pci_bus, pci_id) in self.pci_devices_info:
-            driver = settings.get_nic_driver(pci_id)
-            if driver is not None:
-                # unbind device driver
-                addr_array = pci_bus.split(':')
-                domain_id = addr_array[0]
-                bus_id = addr_array[1]
-                devfun_id = addr_array[2]
-                port = GetNicObj(self, domain_id, bus_id, devfun_id)
-                port.stop()
+        pass
 
     def restore_interfaces_linux(self):
         """
         Restore Linux interfaces.
         """
-        for port in self.ports_info:
-            pci_bus = port['pci']
-            pci_id = port['type']
-            # get device driver
-            driver = settings.get_nic_driver(pci_id)
-            if driver is not None:
-                # unbind device driver
-                addr_array = pci_bus.split(':')
-                domain_id = addr_array[0]
-                bus_id = addr_array[1]
-                devfun_id = addr_array[2]
-
-                port = GetNicObj(self, domain_id, bus_id, devfun_id)
-
-                self.send_expect('echo %s > /sys/bus/pci/devices/%s\:%s\:%s/driver/unbind'
-                                 % (pci_bus, domain_id, bus_id, devfun_id), '# ')
-                # bind to linux kernel driver
-                self.send_expect('modprobe %s' % driver, '# ')
-                self.send_expect('echo %s > /sys/bus/pci/drivers/%s/bind'
-                                 % (pci_bus, driver), '# ')
-                pull_retries = 5
-                while pull_retries > 0:
-                    itf = port.get_interface_name()
-                    if itf == 'N/A':
-                        time.sleep(1)
-                        pull_retries -= 1
-                    else:
-                        break
-                if itf == 'N/A':
-                    self.logger.warning("Fail to bind the device with the linux driver")
-                else:
-                    self.send_expect("ifconfig %s up" % itf, "# ")
-            else:
-                self.logger.info("NOT FOUND DRIVER FOR PORT (%s|%s)!!!" % (pci_bus, pci_id))
+        pass
 
     def setup_memory(self, hugepages=-1):
         """
         Setup hugepage on DUT.
         """
-        try:
-            function_name = 'setup_memory_%s' % self.get_os_type()
-            setup_memory = getattr(self, function_name)
-            setup_memory(hugepages)
-        except AttributeError:
-            self.logger.error("%s is not implemented" % function_name)
+        pass
 
     def setup_memory_linux(self, hugepages=-1):
         """
         Setup Linux hugepages.
-        """
-        if self.virttype == 'XEN':
-            return
-        hugepages_size = self.send_expect("awk '/Hugepagesize/ {print $2}' /proc/meminfo", "# ")
-        total_huge_pages = self.get_total_huge_pages()
-        total_numa_nodes = self.send_expect("ls /sys/devices/system/node | grep node* | wc -l", "# ")
-        numa_service_num = self.get_def_rte_config('CONFIG_RTE_MAX_NUMA_NODES')
-        try:
-            int(total_numa_nodes)
-        except ValueError:
-            total_numa_nodes = -1
-        if numa_service_num is not None:
-            numa = min(int(total_numa_nodes), int(numa_service_num))
-        else:
-            numa = total_numa_nodes
-        force_socket = False
-
-        if int(hugepages_size) < (1024 * 1024):
-            if self.architecture == "x86_64":
-                arch_huge_pages = hugepages if hugepages > 0 else 4096
-            elif self.architecture == "i686":
-                arch_huge_pages = hugepages if hugepages > 0 else 512
-                force_socket = True
-            # set huge pagesize for x86_x32 abi target
-            elif self.architecture == "x86_x32":
-                arch_huge_pages = hugepages if hugepages > 0 else 256
-                force_socket = True
-            elif self.architecture == "ppc_64":
-                arch_huge_pages = hugepages if hugepages > 0 else 512
-            elif self.architecture == "arm64":
-                if int(hugepages_size) >= (512 * 1024):
-                    arch_huge_pages = hugepages if hugepages > 0 else 8
-                else:
-                    arch_huge_pages = hugepages if hugepages > 0 else 2048
-
-            if total_huge_pages != arch_huge_pages:
-                # before all hugepage average distribution  by all socket,
-                # but sometimes create mbuf pool on socket 0 failed when setup testpmd,
-                # so set all huge page on socket 0
-                if force_socket:
-                    self.set_huge_pages(arch_huge_pages, 0)
-                else:
-                    for numa_id in range(0, int(numa)):
-                        self.set_huge_pages(arch_huge_pages, numa_id)
-                    if numa == -1:
-                        self.set_huge_pages(arch_huge_pages)
-
-        self.mount_huge_pages()
-        self.hugepage_path = self.strip_hugepage_path()
-
-    def setup_memory_freebsd(self, hugepages=-1):
-        """
-        Setup Freebsd hugepages.
         """
         pass
 
