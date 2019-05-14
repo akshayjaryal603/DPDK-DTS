@@ -34,29 +34,28 @@ class DPDKmydut(MyDut):
         # set env variable
         # These have to be setup all the time. Some tests need to compile
         # example apps by themselves and will fail otherwise.
-	print("******* Changes while")
+	print("*************** Changes while")
 	self.send_expect("cd ~/dpdk", "#")
         self.send_expect("export RTE_TARGET=" + target, "#")
         self.send_expect("export RTE_SDK=`pwd`", "#")
 
-        self.set_rxtx_mode()
+	if not self.skip_setup:
+		self.build_install_dpdk_linux(target, extra_options='')
+	out = self.send_expect("restool dprc list", "#")
 
-        drivername = load_global_setting(HOST_DRIVER_SETTING)
+	if "dprc.2" in out:
+		self.logger.info("dprc.1 and dprc.2 exists")
+	else:
+		self.send_expect("source /usr/local/dpdk/dpaa2/dynamic_dpl.sh dpmac.1 dpmac.2", "#")
+		out = self.send_expect("restool dprc list", "#")
+		if "dprc.2" in out:
+			self.logger.info("dprc.1 and dprc.2 created sucesssfully")
+	self.send_expext("export DPRC=dprc.2", "#")
+	self.send_expext("pkill l2fwd", "#")
+	self.send_expext("pkil l3fwd", "#")
+	self.send_expext("pkill l3fwd_lpm", "#")
+	self.send_expext("rm -rf /dev/hugepages/*", "#",2)
 
-        self.set_driver_specific_configurations(drivername)
-
-        if not self.skip_setup:
-            self.build_install_dpdk(target)
-
-        self.setup_memory()
-
-        drivername = load_global_setting(HOST_DRIVER_SETTING)
-        drivermode = load_global_setting(HOST_DRIVER_MODE_SETTING)
-        self.setup_modules(target, drivername, drivermode)
-
-        if bind_dev and self.get_os_type() == 'linux':
-            self.bind_interfaces_linux(drivername)
-        self.extra_nic_setup()
 
     def setup_modules(self, target, drivername, drivermode):
         """
