@@ -11,15 +11,18 @@ from logger import getLogger
 from settings import IXIA, DRIVERS
 
 
-class DPDKmydut(MyDut):
+class DPDKdut(MyDut):
 
     """
     DPDK project class for DUT. DTS will call set_target function to setup
     build, memory and kernel module.
     """
-
+    
     def __init__(self, crb, serializer, dut_id):
-        super(DPDKmydut, self).__init__(crb, serializer, dut_id)
+
+	print("********** Project_mydut file first line")
+
+        super(DPDKdut, self).__init__(crb, serializer, dut_id)
         self.testpmd = None
 
     def set_target(self, target, bind_dev=True):
@@ -29,12 +32,14 @@ class DPDKmydut(MyDut):
         Set hugepage on DUT and install modules required by DPDK.
         Configure default ixgbe PMD function.
         """
+	print("********** Project_mydut file set_target")
+
         self.target = target
         #self.set_toolchain(target)
         # set env variable
         # These have to be setup all the time. Some tests need to compile
         # example apps by themselves and will fail otherwise.
-	print("*************** Changes while")
+	print("*********** Changes while")
 	self.send_expect("cd ~/dpdk", "#")
         self.send_expect("export RTE_TARGET=" + target, "#")
         self.send_expect("export RTE_SDK=`pwd`", "#")
@@ -50,11 +55,11 @@ class DPDKmydut(MyDut):
 		out = self.send_expect("restool dprc list", "#")
 		if "dprc.2" in out:
 			self.logger.info("dprc.1 and dprc.2 created sucesssfully")
-	self.send_expext("export DPRC=dprc.2", "#")
-	self.send_expext("pkill l2fwd", "#")
-	self.send_expext("pkil l3fwd", "#")
-	self.send_expext("pkill l3fwd_lpm", "#")
-	self.send_expext("rm -rf /dev/hugepages/*", "#",2)
+	self.send_expect("export DPRC=dprc.2", "#")
+	self.send_expect("pkill l2fwd", "#")
+	self.send_expect("pkil l3fwd", "#")
+	self.send_expect("pkill l3fwd_lpm", "#")
+	self.send_expect("rm -rf /dev/hugepages/*", "#",2)
 
 
     def setup_modules(self, target, drivername, drivermode):
@@ -65,7 +70,7 @@ class DPDKmydut(MyDut):
         setup_modules(target, drivername, drivermode)
 
     def setup_modules_linux(self, target, drivername, drivermode):
-        pass
+	pass
 
     def restore_modules(self):
         """
@@ -86,6 +91,7 @@ class DPDKmydut(MyDut):
         ixgbe and fm10k only support vector and no vector model
         all NIC default rx/tx model is vector PMD
         """
+
         pass
 
     def set_package(self, pkg_name="", patch_list=[]):
@@ -105,22 +111,19 @@ class DPDKmydut(MyDut):
         """
 	#changes to be made later
 
-        build_time = 300
-        if "icc" in target:
-            build_time = 900
+        build_time = 900
+        
+	'''if "icc" in target:
+            build_time = 900'''
         # clean all
+	self.send_expect("cd ~/dpdk", "#")
         self.send_expect("rm -rf " + target, "#")
-        self.send_expect("rm -rf %s" % r'./app/test/test_resource_c.res.o' , "#")
-        self.send_expect("rm -rf %s" % r'./app/test/test_resource_tar.res.o' , "#")
-        self.send_expect("rm -rf %s" % r'./app/test/test_pci_sysfs.res.o' , "#")
 
         # compile
+	number_of_cores = 4		#changes made here for dpdk compilationm according to the LS2088ARDB board
+	extra_options = "CONFIG_RTE_KNI_KMOD=n CONFIG_RTE_LIBRTE_PMD_OPENSSL=n CONFIG_RTE_EAL_IGB_UIO=n"
         out = self.send_expect("make -j %d install T=%s %s" % 
-            (self.number_of_cores, target, extra_options), "# ", build_time)
-        if("Error" in out or "No rule to make" in out):
-            self.logger.error("ERROR - try without '-j'")
-            # if Error try to execute make without -j option
-            out = self.send_expect("make install T=%s %s" % (target, extra_options), "# ", 120)
+            (number_of_cores, target, extra_options), "# ", build_time)     #self.number_of_cores changed to number_of_cores
 
         assert ("Error" not in out), "Compilation error..."
         assert ("No rule to make" not in out), "No rule to make error..."
@@ -203,7 +206,7 @@ class DPDKmydut(MyDut):
         """
         Unbind the interfaces
         """
-        pass
+	pass
 
     def build_dpdk_apps(self, folder, extra_options=''):
         """
@@ -218,15 +221,14 @@ class DPDKmydut(MyDut):
         """
         # icc compile need more time
         if 'icc' in self.target:
-            timeout = 300
+            timeout = 600
         else:
             timeout = 90
         self.send_expect("rm -rf %s" % r'./app/test/test_resource_c.res.o' , "#")
         self.send_expect("rm -rf %s" % r'./app/test/test_resource_tar.res.o' , "#")
         self.send_expect("rm -rf %s" % r'./app/test/test_pci_sysfs.res.o' , "#")
-        return self.send_expect("make -j %d -C %s %s" % (self.number_of_cores,
-                                                         folder, extra_options),
-                                "# ", timeout)
+        return self.send_expect("make -C %s %s" % (folder, extra_options),
+                                "# ", timeout)    		# here we removed -j %d because we haven't use this for make self.number_of_cores
 
     def get_blacklist_string(self, target, nic):
         """
@@ -249,11 +251,11 @@ class DPDKmydut(MyDut):
                 blacklist += '-b %s ' % self.ports_info[port]['pci']
         return blacklist
 
-    def get_def_rte_config(self, config):
+	
+    def get_def_rte_config(self, config):     # need ot be change in future
         """
         Get RTE configuration from config/defconfig_*.
         """
-	#changes to be made later
         out = self.session.send_command("cat config/defconfig_%s | sed '/^#/d' | sed '/^\s*$/d'"
                                         % self.target, 1)
 

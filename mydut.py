@@ -7,10 +7,8 @@ from settings import NICS, LOG_NAME_SEP
 from ssh_connection import SSHConnection
 from crb import Crb
 from net_device import GetNicObj
-#from virt_resource import VirtResource
 from utils import RED, remove_old_rsa_key
 from uuid import uuid4
-#from project_dpdk import DPDKdut
 
 class MyDut(Crb):
 
@@ -31,11 +29,11 @@ class MyDut(Crb):
 
     def __init__(self, crb, serializer, dut_id):
 
-	print("******************** MyDut class file call here")
+	print("********** MyDut class file call here")
 
         self.NAME = 'dut' + LOG_NAME_SEP + '%s' % crb['My IP']
         super(MyDut, self).__init__(crb, serializer, self.NAME, alt_session=True, dut_id=dut_id)
-
+			#changes to be made here
         self.host_init_flag = False
         self.number_of_cores = 0
         self.tester = None
@@ -96,9 +94,6 @@ class MyDut(Crb):
         mount_procfs()
 
     def mount_procfs_linux(self):
-        pass
-
-    def mount_procfs_freebsd(self):
         pass
 
     def get_ip_address(self):
@@ -245,7 +240,7 @@ class MyDut(Crb):
         bind_script_path = self.get_dpdk_bind_script()
         self.send_expect('%s --force %s' % (bind_script_path, binding_list), '# ')
 
-    def get_ports(self, nic_type='any', perf=None, socket=None):
+    def get_ports(self, nic_type='dpaa2', perf=None, socket=None):
         """
         Return DUT port list with the filter of NIC type, whether run IXIA
         performance test, whether request specified socket.
@@ -257,28 +252,28 @@ class MyDut(Crb):
         if nic_type == 'any':
             for portid in range(len(self.ports_info)):
                 ports.append(portid)
+            	return ports
+        elif nic_type == 'dpaa2':
+            for portid in range(len(self.ports_info)):
+                if self.ports_info[portid]['source'] == 'dpaa2':
+                    if (socket is None or
+                        self.ports_info[portid]['numa'] == -1 or
+                            socket == self.ports_info[portid]['numa']):
+                        ports.append(portid)
+	    ports = [0,1]
             return ports
-        elif nic_type == 'cfg':
+	elif nic_type == 'cfg':
             for portid in range(len(self.ports_info)):
                 if self.ports_info[portid]['source'] == 'cfg':
                     if (socket is None or
                         self.ports_info[portid]['numa'] == -1 or
                             socket == self.ports_info[portid]['numa']):
                         ports.append(portid)
+	    #ports = [0,1]
             return ports
         else:
-            for portid in range(len(self.ports_info)):
-                port_info = self.ports_info[portid]
-                # match nic type
-                if port_info['type'] == NICS[nic_type]:
-                    # match numa or none numa awareness
-                    if (socket is None or
-                        port_info['numa'] == -1 or
-                            socket == port_info['numa']):
-                        # port has link,
-                        if self.tester.get_local_port(portid) != -1:
-                            ports.append(portid)
-            return ports
+            self.logger.info("ports not found")
+            return
 
     def get_ports_performance(self, nic_type='any', perf=None, socket=None,
                               force_same_socket=True,
@@ -288,34 +283,8 @@ class MyDut(Crb):
             Focuses on getting ports with same/different NUMA node and/or
             same/different NIC.
         """
-
-        available_ports = self.get_ports(nic_type, perf, socket)
-        accepted_sets = []
-
-        while len(available_ports) > 0:
-            accepted_ports = []
-            # first available port is the reference port
-            accepted_ports.append(available_ports[0])
-
-            # check from second port according to parameter
-            for port in available_ports[1:]:
-
-                if force_same_socket and socket is None:
-                    if self.ports_info[port]['numa'] != self.ports_info[accepted_ports[0]]['numa']:
-                        continue
-                if force_different_nic:
-                    if self.ports_info[port]['pci'][:-1] == self.ports_info[accepted_ports[0]]['pci'][:-1]:
-                        continue
-
-                accepted_ports.append(port)
-
-            for port in accepted_ports:
-                available_ports.remove(port)
-
-            accepted_sets.append(accepted_ports)
-
-        biggest_set = max(accepted_sets, key=lambda s: len(s))
-
+	nic_type = "dpaa2"
+	biggest_set=[0,1]
         return biggest_set
 
     def get_peer_pci(self, port_num):
@@ -343,10 +312,7 @@ class MyDut(Crb):
         """
         return the Numa Id of port
         """
-        if self.ports_info[port_num]['numa'] == -1:
-            self.logger.warning('NUMA not supported')
-
-        return self.ports_info[port_num]['numa']
+        return 0
 
     def lcore_table_print(self, horizontal=False):
         if not horizontal:
@@ -377,6 +343,9 @@ class MyDut(Crb):
         if self.nic_type == 'any':
             return True
         elif self.nic_type == 'cfg':
+            if self.conf.check_port_available(pci_bus) is True:
+                return True
+	elif self.nic_type == 'dpaa2':
             if self.conf.check_port_available(pci_bus) is True:
                 return True
         elif self.nic_type not in NICS.keys():
@@ -457,7 +426,16 @@ class MyDut(Crb):
 
         skipped = RED('Skipped: Unknown/not selected')
         unknow_interface = RED('Skipped: unknow_interface')
-
+	
+	domain_id = "0000"
+	bus_id = "01"
+	devfun_id = "00.0"
+	port = GetNicObj(self, domain_id, bus_id, devfun_id)
+	port.socket = 0 # set to 0 as numa node in ls2088 is returning -1
+	self.ports_info = [{'intf':'eth0','source':'dpaa2','mac':'b2:c8:30:9e:a6:0b','pci':'nxp_NA','numa':1,'peer':'0001:00:00.0',
+	'type':'nxp:NA','port':port},{'intf':'eth1','source':'dpaa2','mac':'b2:c8:30:9e:a6:0c','pci':'nxp_NA','numa':1,'peer':'0001:01:00.0',
+	'type':'nxp:NA','port':port}]
+	
         for (pci_bus, pci_id) in self.pci_devices_info:
             if self.check_ports_available(pci_bus, pci_id) is False:
                 self.logger.info("DUT: [%s %s] %s" % (pci_bus, pci_id,
@@ -497,19 +475,6 @@ class MyDut(Crb):
                 {'port': port, 'pci': pci_bus, 'type': pci_id, 'numa': numa,
                  'intf': intf, 'mac': macaddr})
 
-
-    def scan_ports_uncached_freebsd(self):
-        """
-        Scan Freebsd ports and collect port's pci id, mac address, ipv6 address.
-        """
-        pass
-
-    def setup_virtenv(self, virttype):
-        """
-        Setup current virtualization hypervisor type and remove elder VM ssh keys
-        """
-        pass
-
     def generate_sriov_vfs_by_port(self, port_id, vf_num, driver='default'):
         """
         Generate SRIOV VFs with default driver it is bound now or specified driver.
@@ -526,6 +491,13 @@ class MyDut(Crb):
     def get_vm_core_list(self):
 
         return 
+
+    def get_core_list(self, config, socket=-1):
+        """
+        Get lcore array according to the core config like "all", "1S/1C/1T".
+        We can specify the physical CPU socket by the "socket" parameter.
+        """
+	return ["1", "2", "3", "4", "5", "6", "7"]
 
     def load_portconf(self):
         """
@@ -559,82 +531,17 @@ class MyDut(Crb):
             self.ports_map = self.serializer.load(self.PORT_MAP_CACHE_KEY)
 
         if not self.read_cache or self.ports_map is None:
-            self.map_available_ports_uncached()
+            #self.map_available_ports_uncached()
             self.serializer.save(self.PORT_MAP_CACHE_KEY, self.ports_map)
 
+	self.ports_map = [2,1]      #changes made for l2fwd
         self.logger.warning("DUT PORT MAP: " + str(self.ports_map))
 
     def map_available_ports_uncached(self):
         """
         Generate network connection mapping list.
         """
-        nrPorts = len(self.ports_info)
-        if nrPorts == 0:
-            return
-
-        remove = []
-        self.ports_map = [-1] * nrPorts
-
-        hits = [False] * len(self.tester.ports_info)
-
-        for dutPort in range(nrPorts):
-            peer = self.get_peer_pci(dutPort)
-            dutpci = self.ports_info[dutPort]['pci']
-            if peer is not None:
-                for remotePort in range(len(self.tester.ports_info)):
-                    if self.tester.ports_info[remotePort]['pci'].lower() == peer.lower():
-                        hits[remotePort] = True
-                        self.ports_map[dutPort] = remotePort
-                        break
-                if self.ports_map[dutPort] == -1:
-                    self.logger.error("CONFIGURED TESTER PORT CANNOT BE FOUND!!!")
-                else:
-                    continue  # skip ping6 map
-
-            for remotePort in range(len(self.tester.ports_info)):
-                if hits[remotePort]:
-                    continue
-
-                # skip ping self port
-                remotepci = self.tester.ports_info[remotePort]['pci']
-                if (self.crb['IP'] == self.crb['tester IP']) and (dutpci == remotepci):
-                    continue
-
-                # skip ping those not connected port
-                ipv6 = self.get_ipv6_address(dutPort)
-                if ipv6 == "Not connected":
-                    if self.tester.ports_info[remotePort].has_key('ipv4'):
-			out = self.tester.send_ping(
-				dutPort, self.tester.ports_info[remotePort]['ipv4'],
-				self.get_mac_address(dutPort))
-		    else:
-                    	continue
-		else:
-                    if getattr(self, 'send_ping6', None):
-                    	out = self.send_ping6(
-                        	dutPort, self.tester.ports_info[remotePort]['ipv6'],
-                        	self.get_mac_address(dutPort))
-                    else:
-                    	out = self.tester.send_ping6(
-				remotePort, ipv6, self.get_mac_address(dutPort))
-
-                if ('64 bytes from' in out):
-                    self.logger.info("PORT MAP: [dut %d: tester %d]" % (dutPort, remotePort))
-                    self.ports_map[dutPort] = remotePort
-                    hits[remotePort] = True
-                    if self.crb['IP'] == self.crb['tester IP']:
-                        # remove dut port act as tester port
-                        remove_port = self.get_port_info(remotepci)
-                        if remove_port is not None:
-                            remove.append(remove_port)
-                        # skip ping from those port already act as dut port
-                        testerPort = self.tester.get_local_index(dutpci)
-                        if testerPort != -1:
-                            hits[testerPort] = True
-                    break
-
-        for port in remove:
-            self.ports_info.remove(port)
+        pass
 
     def check_port_occupied(self, port):
         out = self.alt_session.send_expect('lsof -i:%d' % port, '# ')
@@ -643,27 +550,15 @@ class MyDut(Crb):
         else:
             return True
 
-    def get_maximal_vnc_num(self):
-        
-	return
-
-    def close(self):
-        """
-        Close ssh session of DUT.
-        """
-        pass
-
     def virt_exit(self):
-        """
-        Stop all unstopped hypervisors process
-        """
-        # try to kill all hypervisor process
-        pass
-
+	pass
+  
     def crb_exit(self):
         """
         Recover all resource before crb exit
         """
+	out = self.send_expect("restool dprc list","#")
+	if "dprc.2" in out:
+		pass
         self.logger.logger_exit()
-        #self.enable_tester_ipv6()
         self.close()
