@@ -9,20 +9,19 @@ import re
 from test_case import TestCase
 from exception import VerifyFailure
 from settings import HEADER_SIZE
-from etgen import IxiaPacketGenerator
+from etgen import IxiaPacketGenerator, SoftwarePacketGenerator
+from mydut import MyDut
 
 class TestL3fwd(TestCase,IxiaPacketGenerator):
 #SoftwarePacketGenerator
 
     path = "./examples/l3fwd/build/"
 
-    test_cases_2_ports = [#(1,"1S/1C/1T","%s -c %s -n %d -- -P -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.1.0})'"),
-                          #"1S/1C/2T": "%s -c %s -n %d -- -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.1.1})'",
-                          #(1,"1S/2C/1T","%s -c %s -n %d -- -P -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.2.0})'"),
-                          #(1,"1S/4C/1T", "%s -c %s -n %d -- -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.2.0}),(P0,1,C{1.3.0}), (P1,1,C{1.4.0})'"),
-                          #"2S/2C/1T": "%s -c %s -n %d -- -p %s  --config '(P0,0,C{0.1.0}), (P1,0,C{0.2.0}),(P0,1,C{1.3.0}), (P1,1,C{1.4.0})'",
-			  (1,"1S/4C/1T", "%s -c %s -n %d -- -P -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.2.0}),(P0,1,C{1.3.0}),(P1,1,C{1.4.0})'"),
-                          (1,"1S/2C/1T", "%s -c %s -n %d -- -p %s  --config '(P0,0,C{0.1.0}), (P1,0,C{0.2.0}),(P0,1,C{1.3.0}), (P1,1,C{1.4.0})'"),
+    test_cases_2_ports = [(1,"1S/2C/1T","%s -c %s -n %d -- -P -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.2.0})'"),
+
+			  #(1,"1S/4C/1T", "%s -c %s -n %d -- -P -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.2.0}),(P0,1,C{1.3.0}),(P1,1,C{1.4.0})'"),
+                          #(1,"2S/2C/1T", "%s -c %s -n %d -- -p %s  --config '(P0,0,C{0.1.0}), (P1,0,C{0.2.0}),(P0,1,C{1.1.0}), (P1,1,C{1.2.0})'"),
+			  #(1,"1S/4C/1T", "%s -c %s -n %d -- -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.2.0}),(P0,1,C{1.3.0}),(P1,1,C{1.4.0})'"),
                           ]
 
     test_cases_4_ports = [#(1, "1S/1C/1T",
@@ -32,9 +31,6 @@ class TestL3fwd(TestCase,IxiaPacketGenerator):
                           #(1, "1S/4C/1T",
                            #"%s -c %s -n %d -- -P -p %s  --config '(P0,0,C{1.1.0}),(P1,0,C{1.2.0}),(P2,0,C{1.3.0}),(P3,0,C{1.4.0})'"),
                           #(2, "1S/8C/1T",
-                           #"%s -c %s -n %d -- -p %s  --config '(P0,0,C{1.1.0}),(P0,1,C{1.2.0}),(P1,0,C{1.3.0}),(P1,1,C{1.4.0}),(P2,0,C{1.5.0}),(P2,1,C{1.6.0}),(P3,0,C{1.7.0}),(P3,1,C{1.8.0})'"),
-                          #(2, "2S/2C/1T",
-                          # "%s -c %s -n %d -- -p %s  --config '(P0,0,C{1.1.0}),(P1,0,C{1.2.0}),(P2,0,C{0.3.0}),(P3,0,C{0.4.0})'"),
                           ]
 
     queues_4_ports = []
@@ -65,15 +61,16 @@ class TestL3fwd(TestCase,IxiaPacketGenerator):
         "{IPv4(13,101,0,0), 24, P3}",
     ]
 
-    frame_sizes = [64, 72, 128, 256, 512, 1024, 1518, 2048]  # 65, 128
+    frame_sizes = [64]  #, 72, 128, 256, 512, 1024, 1518, 2048]  # 65, 128
 
-    methods = ['lpm']#, 'exact']
+    methods = ['lpm']  #, 'exact']
 
     #
     #
     # Utility methods and other non-test code.
     #
     # Insert or move non-test functions here.
+
     def portRepl(self, match):
         """
         Function to replace P([0123]) pattern in tables
@@ -114,7 +111,8 @@ class TestL3fwd(TestCase,IxiaPacketGenerator):
         
 
         # Verify that enough threads are available
-        cores = self.dut.get_core_list("1S/2C/2T") #2S/8C/2T
+	#cores = self.mydut.get_core_list("1S/2C/1T")
+	cores = self.dut.get_core_list("1S/2C/1T")	
 	print("***********Cores", cores)
         self.verify(cores is not None, "Insufficient cores for speed testing")
 
@@ -285,7 +283,7 @@ class TestL3fwd(TestCase,IxiaPacketGenerator):
 
                         subtitle.append(cores)
                         cmdline = rtCmdLines[cores] % (TestL3fwd.path + "l3fwd_" + mode, coreMask[cores],
-                                                       self.dut.get_memory_channels(), utils.create_mask(valports[:ports_num]))
+                                                       self.dut.get_memory_channels(), utils.create_mask(valports[:ports_num]))  #cores
                         if self.nic == "niantic":
                             cmdline = cmdline + " --parse-ptype"
 
