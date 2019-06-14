@@ -10,17 +10,19 @@ from test_case import TestCase
 from exception import VerifyFailure
 from settings import HEADER_SIZE
 from etgen import IxiaPacketGenerator, SoftwarePacketGenerator
-from mydut import MyDut
+#from mydut import MyDut
 
 class TestL3fwd(TestCase,IxiaPacketGenerator):
 #SoftwarePacketGenerator
 
     path = "./examples/l3fwd/build/"
 
-    test_cases_2_ports = [(1,"1S/2C/1T","%s -c %s -n %d -- -P -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.2.0})'"),
+    test_cases_2_ports = [(1,"1S/2C/1T","%s -c %s -n %d -- -P -p %s  --config '(P0,0,C{0.1.0}), (P1,0,C{1.2.0})'"),          
+			  (1,"2S/2C/1T", "%s -c %s -n %d -- -p %s  --config '(P0,0,C{0.1.0}), (P1,0,C{0.2.0}),(P0,1,C{1.1.0}),(P1,1,C{1.2.0})'"),
+			  #(1,"2S/2C/1T", "%s -c %s -n %d -- -p %s  --config '(P0,0,C{0.1.0}), (P1,0,C{0.2.0}),(P0,1,C{1.1.0}), (P1,1,C{1.2.0})'"),
 
-			  #(1,"1S/4C/1T", "%s -c %s -n %d -- -P -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.2.0}),(P0,1,C{1.3.0}),(P1,1,C{1.4.0})'"),
-                          #(1,"2S/2C/1T", "%s -c %s -n %d -- -p %s  --config '(P0,0,C{0.1.0}), (P1,0,C{0.2.0}),(P0,1,C{1.1.0}), (P1,1,C{1.2.0})'"),
+
+ 			  #(1,"1S/4C/1T", "%s -c %s -n %d -- -P -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.2.0}),(P0,1,C{1.3.0}),(P1,1,C{1.4.0})'"),
 			  #(1,"1S/4C/1T", "%s -c %s -n %d -- -p %s  --config '(P0,0,C{1.1.0}), (P1,0,C{1.2.0}),(P0,1,C{1.3.0}),(P1,1,C{1.4.0})'"),
                           ]
 
@@ -61,7 +63,7 @@ class TestL3fwd(TestCase,IxiaPacketGenerator):
         "{IPv4(13,101,0,0), 24, P3}",
     ]
 
-    frame_sizes = [64]  #, 72, 128, 256, 512, 1024, 1518, 2048]  # 65, 128
+    frame_sizes = [64, 72, 128, 256, 512, 1024, 1518, 2048]  # 65, 128
 
     methods = ['lpm']  #, 'exact']
 
@@ -111,7 +113,6 @@ class TestL3fwd(TestCase,IxiaPacketGenerator):
         
 
         # Verify that enough threads are available
-	#cores = self.mydut.get_core_list("1S/2C/1T")
 	cores = self.dut.get_core_list("1S/2C/1T")	
 	print("***********Cores", cores)
         self.verify(cores is not None, "Insufficient cores for speed testing")
