@@ -17,7 +17,7 @@ class DPDKdut(Dut):
     DPDK project class for DUT. DTS will call set_target function to setup
     build, memory and kernel module.
     """
-
+    print("*************************Inside Project_DPDK class*******************************")
     def __init__(self, crb, serializer, dut_id):
         super(DPDKdut, self).__init__(crb, serializer, dut_id)
         self.testpmd = None
@@ -184,8 +184,9 @@ class DPDKdut(Dut):
         self.send_expect("rm -rf %s" % r'./app/test/test_pci_sysfs.res.o' , "#")
 
         # compile
+	number_of_cores = 3
         out = self.send_expect("make -j %d install T=%s %s" % 
-            (self.number_of_cores, target, extra_options), "# ", build_time)
+            (3, target, extra_options), "# ", build_time)		# self.number_of_cores
         if("Error" in out or "No rule to make" in out):
             self.logger.error("ERROR - try without '-j'")
             # if Error try to execute make without -j option

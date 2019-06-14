@@ -1,3 +1,4 @@
+
 import time
 import re
 import os
@@ -441,7 +442,11 @@ class Crb(object):
         Get OS type from execution configuration file.
         """
         from dut import Dut
-        if isinstance(self, Dut) and 'OS' in self.crb:
+	from mydut import MyDut
+        if isinstance(self, MyDut) and 'OS' in self.crb:
+            return str(self.crb['OS']).lower()
+	
+	elif isinstance(self, Dut) and 'OS' in self.crb:
             return str(self.crb['OS']).lower()
 
         return 'linux'
@@ -451,10 +456,12 @@ class Crb(object):
         Check real OS type whether match configured type.
         """
         from dut import Dut
+	from mydut import MyDut
         expected = 'Linux.*#'
-        if isinstance(self, Dut) and self.get_os_type() == 'freebsd':
+        if isinstance(self, MyDut) and self.get_os_type() == 'freebsd':
             expected = 'FreeBSD.*#'
-
+	elif isinstance(self, Dut) and self.get_os_type() == 'freebsd':
+            expected = 'FreeBSD.*#'
         self.send_expect('uname', expected, 2, alt_session=True)
 
     def init_core_list(self):

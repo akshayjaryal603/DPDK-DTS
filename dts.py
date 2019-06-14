@@ -15,6 +15,9 @@ import sys          # system module
 import settings     # dts settings
 from tester import Tester
 from dut import Dut
+
+from mydut import MyDut			# changes made for NXP SoC's
+
 from serializer import Serializer
 from test_case import TestCase
 from test_result import Result
@@ -255,7 +258,13 @@ def dts_crbs_init(crbInsts, skip_setup, read_cache, project, base_dir, serialize
     for crbInst in crbInsts:
         dutInst = copy.copy(crbInst)
         dutInst['My IP'] = crbInst['IP']
-        dutobj = get_project_obj(project, Dut, dutInst, serializer, dut_id=dut_id)
+	if project == "mydut":
+		dutobj = get_project_obj(project, MyDut, dutInst, serializer, dut_id=dut_id)    
+										# Changes has to be made here according to the board
+	elif project == "dpdk":
+        	dutobj = get_project_obj(project, Dut, dutInst, serializer, dut_id=dut_id)
+	else:
+		pass 
         duts.append(dutobj)
         dut_id += 1
 
@@ -269,7 +278,7 @@ def dts_crbs_init(crbInsts, skip_setup, read_cache, project, base_dir, serialize
     nic = settings.load_global_setting(settings.HOST_NIC_SETTING)
     for dutobj in duts:
         dutobj.tester = tester
-        dutobj.setup_virtenv(virttype)
+        #dutobj.setup_virtenv(virttype)
         dutobj.set_speedup_options(read_cache, skip_setup)
         dutobj.set_directory(base_dir)
         # save execution nic setting
@@ -353,7 +362,7 @@ def dts_run_target(duts, tester, targets, test_suites):
 
     for dutobj in duts:
         dutobj.stop_ports()
-        dutobj.restore_interfaces()
+        #dutobj.restore_interfaces()
         dutobj.restore_modules()
 
 

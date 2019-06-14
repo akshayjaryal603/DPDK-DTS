@@ -1,3 +1,4 @@
+
 """
 Interface for bulk traffic generators.
 """
