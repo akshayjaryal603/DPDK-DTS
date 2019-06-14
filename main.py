@@ -42,7 +42,7 @@ def git_build_package(gitLabel, pkgName, depot="dep"):
 # Read cmd-line args
 parser = argparse.ArgumentParser(description='DPDK test framework.')
 
-parser.add_argument('--config-file',
+parser.add_argument('-e','--config-file',			#changes made here for NXP DUT
                     default='execution.cfg',
                     help='configuration file that describes the test ' +
                     'cases, DUTs and targets')
